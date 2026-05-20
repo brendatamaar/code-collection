@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { Schema } from "@code-collection/core";
+import type { Schema, Warning } from "@code-collection/core";
 import { describe, expect, it } from "vitest";
+
+type ObjSchema = { properties?: Record<string, Schema>; required?: string[] };
 
 import { inferDtoSchema } from "./parse-dto.js";
 import { parseFile } from "./tree-sitter.js";
@@ -62,7 +64,12 @@ describe("inferDtoSchema", () => {
         address: { $ref: "#/schemas/AddressDTO" }
       }
     });
-    expect(registry.AddressDTO).toEqual({ type: "object" });
+    expect(registry.AddressDTO).toEqual({
+      type: "object",
+      properties: {
+        street: { type: "string" }
+      }
+    });
     expect(registry.UserWithAddressDTO).toEqual(schema);
   });
 
@@ -73,5 +80,59 @@ describe("inferDtoSchema", () => {
       type: "object"
     });
     expect(registry.MissingDTO).toEqual({ type: "object" });
+  });
+
+  it("emits LOMBOK_INFERRED info and infers fields from @Data class", async () => {
+    const warnings: Warning[] = [];
+    const schema = inferDtoSchema("LombokUserDTO", await fixtureTree(), {}, warnings);
+
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ code: "LOMBOK_INFERRED" })
+    );
+    expect((schema as ObjSchema).properties).toHaveProperty("id");
+    expect((schema as ObjSchema).properties).toHaveProperty("name");
+  });
+
+  it("includes superclass fields one level deep for AuditedDTO", async () => {
+    const schema = inferDtoSchema("AuditedDTO", await fixtureTree());
+
+    expect((schema as ObjSchema).properties).toHaveProperty("createdBy");
+    expect((schema as ObjSchema).properties).toHaveProperty("title");
+  });
+
+  it("emits CYCLIC_SCHEMA_REFERENCE and stops recursion for SelfRefDTO", async () => {
+    const warnings: Warning[] = [];
+    const schema = inferDtoSchema("SelfRefDTO", await fixtureTree(), {}, warnings);
+
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ code: "CYCLIC_SCHEMA_REFERENCE" })
+    );
+    expect((schema as ObjSchema).properties).toHaveProperty("name");
+  });
+
+  it("maps List<String> to array schema", async () => {
+    const schema = inferDtoSchema("GenericDTO", await fixtureTree());
+
+    expect((schema as ObjSchema).properties?.["items"]).toEqual({
+      type: "array",
+      items: { type: "string" }
+    });
+  });
+
+  it("maps Optional<AddressDTO> to nullable ref", async () => {
+    const schema = inferDtoSchema("GenericDTO", await fixtureTree());
+
+    expect((schema as ObjSchema).properties?.["optionalAddress"]).toEqual({
+      $ref: "#/schemas/AddressDTO"
+    });
+  });
+
+  it("maps Map<String, Object> to object with additionalProperties", async () => {
+    const schema = inferDtoSchema("GenericDTO", await fixtureTree());
+
+    expect((schema as ObjSchema).properties?.["metadata"]).toEqual({
+      type: "object",
+      additionalProperties: true
+    });
   });
 });

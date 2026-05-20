@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { DetectContext, DetectedStack } from "@code-collection/core";
@@ -6,8 +6,9 @@ import type { DetectContext, DetectedStack } from "@code-collection/core";
 const BUILD_FILES = ["pom.xml", "build.gradle", "build.gradle.kts"] as const;
 
 export async function detect(ctx: DetectContext): Promise<DetectedStack[]> {
+  const buildFiles = await findBuildFiles(ctx.repoPath);
   const detections = await Promise.all(
-    BUILD_FILES.map(async (fileName) => detectBuildFile(ctx.repoPath, fileName))
+    buildFiles.map(async (fileName) => detectBuildFile(ctx.repoPath, fileName))
   );
   const detected = detections
     .filter((detection): detection is DetectedStack => detection !== undefined)
@@ -16,9 +17,38 @@ export async function detect(ctx: DetectContext): Promise<DetectedStack[]> {
   return detected.length > 0 ? [detected[0] as DetectedStack] : [];
 }
 
+async function findBuildFiles(repoPath: string): Promise<string[]> {
+  const found: string[] = [];
+
+  async function visit(relativeDir: string, depth: number): Promise<void> {
+    if (depth > 3) {
+      return;
+    }
+
+    const entries = await readdir(join(repoPath, relativeDir), {
+      withFileTypes: true
+    }).catch(() => []);
+    for (const entry of entries) {
+      const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!["node_modules", "vendor", "target", "build", ".git"].includes(entry.name)) {
+          await visit(relativePath, depth + 1);
+        }
+        continue;
+      }
+      if ((BUILD_FILES as readonly string[]).includes(entry.name)) {
+        found.push(relativePath);
+      }
+    }
+  }
+
+  await visit("", 0);
+  return found;
+}
+
 async function detectBuildFile(
   repoPath: string,
-  fileName: (typeof BUILD_FILES)[number]
+  fileName: string
 ): Promise<DetectedStack | undefined> {
   let content: string;
   try {

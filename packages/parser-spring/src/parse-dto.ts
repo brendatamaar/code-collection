@@ -1,7 +1,9 @@
 import type Parser from "tree-sitter";
 
-import type { Schema } from "@code-collection/core";
+import type { Schema, Warning } from "@code-collection/core";
+import { WarningCode } from "@code-collection/core";
 
+import { hasLombokAnnotation } from "./lombok.js";
 import { mapJavaType } from "./type-mapping.js";
 import type { JavaTree } from "./tree-sitter.js";
 
@@ -21,8 +23,20 @@ const REQUIRED_ANNOTATIONS = new Set(["NotNull", "NotBlank", "NotEmpty"]);
 export function inferDtoSchema(
   className: string,
   sourceTree: JavaTree,
-  registry: Record<string, Schema> = {}
+  registry: Record<string, Schema> = {},
+  warnings: Warning[] = [],
+  seen: Set<string> = new Set()
 ): Schema {
+  if (seen.has(className)) {
+    warnings.push({
+      level: "info",
+      code: WarningCode.CYCLIC_SCHEMA_REFERENCE,
+      message: `Cyclic schema reference detected for ${className}`
+    });
+    registry[className] = { type: "object" };
+    return registry[className];
+  }
+
   const classNode = findClass(sourceTree.rootNode, className);
   if (!classNode) {
     registry[className] = { type: "object" };
@@ -31,8 +45,20 @@ export function inferDtoSchema(
 
   const properties: Record<string, Schema> = {};
   const required: string[] = [];
+  const fieldNodes = [
+    ...superclassFields(sourceTree.rootNode, classNode, warnings),
+    ...fieldsForClass(classNode)
+  ];
 
-  for (const field of fieldsForClass(classNode)) {
+  if (hasLombokAnnotation(classNode)) {
+    warnings.push({
+      level: "info",
+      code: WarningCode.LOMBOK_INFERRED,
+      message: `Inferred Lombok DTO fields for ${className}`
+    });
+  }
+
+  for (const field of fieldNodes) {
     const typeNode = field.childForFieldName("type");
     const nameNode = fieldName(field);
     if (!typeNode || !nameNode) {
@@ -43,7 +69,22 @@ export function inferDtoSchema(
     properties[nameNode.text] = mapped.schema;
 
     if ("$ref" in mapped.schema) {
-      registry[mapped.typeName] ??= { type: "object" };
+      if (mapped.typeName === className || seen.has(mapped.typeName)) {
+        warnings.push({
+          level: "info",
+          code: WarningCode.CYCLIC_SCHEMA_REFERENCE,
+          message: `Cyclic schema reference detected for ${className}.${nameNode.text}`
+        });
+        registry[mapped.typeName] ??= { type: "object" };
+      } else if (registry[mapped.typeName] === undefined) {
+        inferDtoSchema(
+          mapped.typeName,
+          sourceTree,
+          registry,
+          warnings,
+          new Set([...seen, className])
+        );
+      }
     }
 
     if (isRequiredField(typeNode.text, field)) {
@@ -59,6 +100,29 @@ export function inferDtoSchema(
   registry[className] = schema;
 
   return schema;
+}
+
+function superclassFields(
+  rootNode: Parser.SyntaxNode,
+  classNode: Parser.SyntaxNode,
+  warnings: Warning[]
+): Parser.SyntaxNode[] {
+  const superclassName = /\bextends\s+([A-Za-z_]\w*)/.exec(classNode.text)?.[1];
+  if (!superclassName) {
+    return [];
+  }
+
+  const superclass = findClass(rootNode, superclassName);
+  if (!superclass) {
+    warnings.push({
+      level: "info",
+      code: WarningCode.UNSUPPORTED_DTO_FEATURE,
+      message: `External superclass ${superclassName} was not available for DTO inference`
+    });
+    return [];
+  }
+
+  return fieldsForClass(superclass);
 }
 
 function findClass(

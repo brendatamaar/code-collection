@@ -1,9 +1,9 @@
 import type Parser from "tree-sitter";
 
 import type { HttpMethod, SourceLocation, Warning } from "@code-collection/core";
-import { WarningCode } from "@code-collection/core";
 
 import type { SourceFile } from "./parse-controller.js";
+import { extractAuthAnnotations } from "./parse-auth.js";
 
 const MAPPING_ANNOTATIONS: Record<string, HttpMethod> = {
   GetMapping: "GET",
@@ -26,6 +26,7 @@ export interface MethodInfo {
   source: SourceLocation;
   rawParameters: RawParameterInfo[];
   rawReturnType: string;
+  authAnnotations: string[];
   warnings: Warning[];
   node: Parser.SyntaxNode;
 }
@@ -35,23 +36,24 @@ export function extractMethods(
   source: SourceFile
 ): MethodInfo[] {
   return descendantsOfType(controllerNode, "method_declaration")
-    .map((methodNode) => extractMethod(methodNode, source))
-    .filter((method): method is MethodInfo => method !== undefined);
+    .flatMap((methodNode) => extractMethod(methodNode, source));
 }
 
 function extractMethod(
   methodNode: Parser.SyntaxNode,
   source: SourceFile
-): MethodInfo | undefined {
-  const mapping = extractMapping(methodNode);
+): MethodInfo[] {
+  const mappings = extractMappings(methodNode);
   const methodNameNode = methodNode.childForFieldName("name");
   const returnTypeNode = methodNode.childForFieldName("type");
 
-  if (!mapping || !methodNameNode || !returnTypeNode) {
-    return undefined;
+  if (mappings.length === 0 || !methodNameNode || !returnTypeNode) {
+    return [];
   }
 
-  return {
+  const annotations = methodAnnotations(methodNode).map((annotation) => annotation.text);
+
+  return mappings.map((mapping) => ({
     httpMethod: mapping.httpMethod,
     path: mapping.path,
     methodName: methodNameNode.text,
@@ -62,14 +64,15 @@ function extractMethod(
     },
     rawParameters: extractRawParameters(methodNode),
     rawReturnType: returnTypeNode.text,
+    authAnnotations: extractAuthAnnotations(annotations),
     warnings: mapping.warnings,
     node: methodNode
-  };
+  }));
 }
 
-function extractMapping(
+function extractMappings(
   methodNode: Parser.SyntaxNode
-): { httpMethod: HttpMethod; path: string; warnings: Warning[] } | undefined {
+): { httpMethod: HttpMethod; path: string; warnings: Warning[] }[] {
   const annotations = methodAnnotations(methodNode);
 
   for (const annotation of annotations) {
@@ -79,65 +82,43 @@ function extractMapping(
     }
 
     if (name in MAPPING_ANNOTATIONS) {
-      const { path, warnings } = extractPath(annotation);
-      return {
+      const { paths, warnings } = extractPaths(annotation);
+      return paths.map((path) => ({
         httpMethod: MAPPING_ANNOTATIONS[name] as HttpMethod,
         path,
         warnings
-      };
+      }));
     }
 
     if (name === "RequestMapping") {
       const methods = extractRequestMethods(annotation);
-      const { path, warnings } = extractPath(annotation);
-      return {
-        httpMethod: methods[0] ?? "GET",
-        path,
-        warnings:
-          methods.length > 1
-            ? [
-                ...warnings,
-                {
-                  level: "warning",
-                  code: WarningCode.UNSUPPORTED_MULTIPLE_PATHS,
-                  message:
-                    "Multiple RequestMapping methods are not fully expanded in alpha; using the first method"
-                }
-              ]
-            : warnings
-      };
+      const { paths, warnings } = extractPaths(annotation);
+      return methods.flatMap((httpMethod) =>
+        paths.map((path) => ({
+          httpMethod,
+          path,
+          warnings
+        }))
+      );
     }
   }
 
-  return undefined;
+  return [];
 }
 
-function extractPath(annotation: Parser.SyntaxNode): {
-  path: string;
+function extractPaths(annotation: Parser.SyntaxNode): {
+  paths: string[];
   warnings: Warning[];
 } {
   const args = annotation.childForFieldName("arguments");
   if (!args) {
-    return { path: "", warnings: [] };
+    return { paths: [""], warnings: [] };
   }
 
-  const stringLiterals = descendantsOfType(args, "string_literal").map((node) =>
-    unquote(node.text)
-  );
-  const path = stringLiterals[0] ?? "";
-  const warnings =
-    stringLiterals.length > 1
-      ? [
-          {
-            level: "warning" as const,
-            code: WarningCode.UNSUPPORTED_MULTIPLE_PATHS,
-            message:
-              "Multiple mapping paths are not fully expanded in alpha; using the first path"
-          }
-        ]
-      : [];
+  const expressions = extractPathExpressions(args.text);
+  const paths = expressions.length > 0 ? expressions : [""];
 
-  return { path, warnings };
+  return { paths, warnings: [] };
 }
 
 function extractRequestMethods(annotation: Parser.SyntaxNode): HttpMethod[] {
@@ -146,11 +127,82 @@ function extractRequestMethods(annotation: Parser.SyntaxNode): HttpMethod[] {
     return ["GET"];
   }
 
-  const methods = descendants(args)
-    .map((node) => requestMethodFromText(node.text))
-    .filter((method): method is HttpMethod => method !== undefined);
+  const methods = [
+    ...new Set(
+      descendants(args)
+        .map((node) => requestMethodFromText(node.text))
+        .filter((method): method is HttpMethod => method !== undefined)
+    )
+  ];
 
   return methods.length > 0 ? methods : ["GET"];
+}
+
+function extractPathExpressions(argumentText: string): string[] {
+  const inner = argumentText.trim().replace(/^\(/, "").replace(/\)$/, "").trim();
+  if (!inner) {
+    return [""];
+  }
+
+  const named = /(?:value|path)\s*=\s*(\{[^)]*?\}|[^,)]*)/s.exec(inner)?.[1];
+  const expression = named ?? splitTopLevel(inner)[0] ?? "";
+  const trimmed = expression.trim();
+  if (!trimmed || /^(method|consumes|produces)\s*=/.test(trimmed)) {
+    return [""];
+  }
+
+  const arrayText = trimmed.startsWith("{") && trimmed.endsWith("}")
+    ? trimmed.slice(1, -1)
+    : trimmed;
+
+  return splitTopLevel(arrayText)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map(unquote);
+}
+
+function splitTopLevel(value: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+
+  for (const char of value) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      current += char;
+      escaped = true;
+      continue;
+    }
+    if (char === "\"") {
+      current += char;
+      inString = !inString;
+      continue;
+    }
+    if (!inString && char === "{") {
+      depth += 1;
+    }
+    if (!inString && char === "}") {
+      depth -= 1;
+    }
+    if (char === "," && !inString && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts;
 }
 
 function requestMethodFromText(text: string): HttpMethod | undefined {

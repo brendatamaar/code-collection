@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { WarningCode } from "@code-collection/core";
 import { describe, expect, it } from "vitest";
 
 import { extractControllers } from "./parse-controller.js";
@@ -78,18 +77,22 @@ describe("extractMethods", () => {
     ]);
   });
 
-  it("emits a warning and uses the first path for multiple paths", async () => {
-    const [extracted] = await extractFixture("MultiplePathsController.java");
+  it("emits one method entry for each mapping path", async () => {
+    const extracted = await extractFixture("MultiplePathsController.java");
 
-    expect(extracted).toMatchObject({
-      httpMethod: "GET",
-      path: "/users"
-    });
-    expect(extracted?.warnings).toContainEqual({
-      level: "warning",
-      code: WarningCode.UNSUPPORTED_MULTIPLE_PATHS,
-      message:
-        "Multiple mapping paths are not fully expanded in alpha; using the first path"
-    });
+    expect(extracted.map((method) => method.path)).toEqual(["/users", "/people"]);
+    expect(extracted.every((method) => method.httpMethod === "GET")).toBe(true);
+    expect(extracted.flatMap((method) => method.warnings)).toEqual([]);
+  });
+
+  it("emits cartesian product of paths × methods from @RequestMapping", async () => {
+    const extracted = await extractFixture("MultipleMethodsController.java");
+
+    const combos = extracted.map((m) => `${m.httpMethod} ${m.path}`);
+    expect(combos).toContain("GET /items");
+    expect(combos).toContain("POST /items");
+    expect(combos).toContain("GET /products");
+    expect(combos).toContain("POST /products");
+    expect(extracted).toHaveLength(4);
   });
 });

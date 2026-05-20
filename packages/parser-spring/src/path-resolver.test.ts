@@ -34,7 +34,7 @@ describe("resolvePath", () => {
         level: "warning",
         code: WarningCode.DYNAMIC_PREFIX,
         message:
-          "Dynamic class-level route prefix 'Constants.API_PREFIX' could not be statically resolved; left raw text in path"
+          "Dynamic route path 'Constants.API_PREFIX' could not be statically resolved; left raw text in path"
       }
     ]);
   });
@@ -45,9 +45,14 @@ describe("resolvePath", () => {
     expect(result.path).toBe("/${api.prefix}/users");
     expect(result.warnings).toContainEqual({
       level: "warning",
+      code: WarningCode.UNRESOLVED_PROPERTY,
+      message: "Could not resolve property placeholder in '${api.prefix}'"
+    });
+    expect(result.warnings).toContainEqual({
+      level: "warning",
       code: WarningCode.DYNAMIC_PREFIX,
       message:
-        "Dynamic class-level route prefix '${api.prefix}' could not be statically resolved; left raw text in path"
+        "Dynamic route path '${api.prefix}' could not be statically resolved; left raw text in path"
     });
   });
 
