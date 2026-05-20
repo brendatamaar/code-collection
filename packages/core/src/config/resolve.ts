@@ -1,5 +1,6 @@
 import { CodeCollectionError } from "../errors.js";
 import { DEFAULT_OPTIONS } from "./defaults.js";
+import { loadConfigFile as loadDiscoveredConfigFile } from "./load.js";
 import {
   type CliFlags,
   type ConfigFileOptions,
@@ -9,7 +10,7 @@ import {
 import type { ResolvedOptions as ResolvedOptionsT } from "./types.js";
 
 export function loadConfigFile(): ConfigFileOptions {
-  return {};
+  return loadDiscoveredConfigFile();
 }
 
 export function readEnvVars(envVars: EnvVars): ConfigFileOptions {
@@ -20,14 +21,23 @@ export function readEnvVars(envVars: EnvVars): ConfigFileOptions {
 export function resolveOptions(
   cliFlags: CliFlags = {},
   envVars: EnvVars = {},
-  configFile: ConfigFileOptions = loadConfigFile(),
+  configFile: ConfigFileOptions | undefined = undefined,
   defaults: ResolvedOptionsT = DEFAULT_OPTIONS
 ): ResolvedOptionsT {
+  const discoveredConfig =
+    configFile ??
+    loadDiscoveredConfigFile({
+      repoPath: cliFlags.path ?? defaults.repoPath,
+      configPath: cliFlags.config ?? null
+    });
   const envOptions = readEnvVars(envVars);
   const merged = mergeOptions(
-    mergeOptions(mergeOptions(defaults, configFile), envOptions),
+    mergeOptions(mergeOptions(defaults, discoveredConfig), envOptions),
     cliFlagsToOptions(cliFlags, defaults)
   );
+  if (merged.ci) {
+    merged.noColor = true;
+  }
 
   const parsed = ResolvedOptions.safeParse(merged);
   if (!parsed.success) {
@@ -84,7 +94,9 @@ function cliFlagsToOptions(
   }
 
   if (flags.baseUrl !== undefined) {
-    options.servers = parseBaseUrls(flags.baseUrl);
+    const parsed = parseBaseUrls(flags.baseUrl);
+    options.servers = parsed.servers;
+    options.environments = parsed.environments;
   }
 
   if (flags.profile !== undefined) {
@@ -126,22 +138,56 @@ function copyBooleanFlag<T extends keyof ConfigFileOptions>(
   }
 }
 
-function parseBaseUrls(values: string[]): ResolvedOptionsT["servers"] {
+function parseBaseUrls(values: string[]): {
+  servers: ResolvedOptionsT["servers"];
+  environments: ResolvedOptionsT["environments"];
+} {
   if (values.length === 0) {
-    return [{ url: "{{baseUrl}}" }];
+    return { servers: [{ url: "{{baseUrl}}" }], environments: {} };
   }
 
   if (values.length === 1 && !values[0]?.includes("=")) {
-    return [{ url: values[0] ?? "{{baseUrl}}" }];
+    return {
+      servers: [{ url: values[0] ?? "{{baseUrl}}" }],
+      environments: {}
+    };
   }
 
-  return values.map((value) => {
+  const hasNamed = values.some((value) => value.includes("="));
+  const hasUnnamed = values.some((value) => !value.includes("="));
+  if (hasNamed && hasUnnamed) {
+    throw new CodeCollectionError({
+      code: "INVALID_OPTIONS",
+      message: "Do not mix named and unnamed --base-url values",
+      suggestion: "Use either --base-url https://... or repeated name=https://... values."
+    });
+  }
+
+  const seen = new Set<string>();
+  const servers = values.map((value) => {
     const equalsIndex = value.indexOf("=");
+    const name = value.slice(0, equalsIndex);
+    if (seen.has(name)) {
+      throw new CodeCollectionError({
+        code: "INVALID_OPTIONS",
+        message: `Duplicate --base-url environment '${name}'`
+      });
+    }
+    seen.add(name);
+
     return {
-      url: equalsIndex === -1 ? value : value.slice(equalsIndex + 1),
-      description: equalsIndex === -1 ? undefined : value.slice(0, equalsIndex)
+      url: value.slice(equalsIndex + 1),
+      description: name
     };
   });
+  const environments = Object.fromEntries(
+    servers.map((server) => [
+      server.description as string,
+      { baseUrl: server.url }
+    ])
+  );
+
+  return { servers, environments };
 }
 
 function mergeOptions(
@@ -177,6 +223,7 @@ function mergeOptions(
       ...base.warnings,
       ...overrides.warnings
     },
+    environments: overrides.environments ?? base.environments,
     exclude: overrides.exclude ?? base.exclude
   };
 }

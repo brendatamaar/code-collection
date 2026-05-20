@@ -2,7 +2,7 @@
   "irVersion": "1.0",
   "metadata": {
     "extractedAt": "1970-01-01T00:00:00.000Z",
-    "toolVersion": "0.1.0",
+    "toolVersion": "0.5.0-beta",
     "stack": "spring",
     "stackVariant": "spring-boot",
     "repoPath": "fixtures/spring/alpha-fixture",
