@@ -1,0 +1,7 @@
+{
+  "name": "spring-plus-node-bff",
+  "private": true,
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

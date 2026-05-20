@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { defineCommand, runMain } from "citty";
 
 import { extractCommand } from "./commands/extract.js";
+import { initCommand } from "./commands/init.js";
 import { exitCodeForError, formatError } from "./output/error-formatter.js";
 
 const version = readPackageVersion();
@@ -17,7 +18,8 @@ const main = defineCommand({
     description: "Generate API collections from backend code"
   },
   subCommands: {
-    extract: extractCommand
+    extract: extractCommand,
+    init: initCommand
   }
 });
 

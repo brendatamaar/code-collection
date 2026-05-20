@@ -1,0 +1,91 @@
+{
+  "irVersion": "1.0",
+  "metadata": {
+    "extractedAt": "1970-01-01T00:00:00.000Z",
+    "toolVersion": "0.5.0-beta",
+    "stack": "spring",
+    "stackVariant": "spring-boot",
+    "repoPath": "fixtures/multi-stack/spring-plus-node",
+    "fileCount": 1
+  },
+  "info": {
+    "title": "code-collection"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "auth": [
+    {
+      "id": "node-auth",
+      "type": "bearer",
+      "bearerFormat": "JWT",
+      "description": "Node middleware bearer authentication"
+    }
+  ],
+  "tags": [],
+  "schemas": {},
+  "endpoints": [
+    {
+      "id": "00218884a40ad6835c04dcd6ba192b80abd38c79",
+      "method": "GET",
+      "path": "/api/v1/users",
+      "operationId": "users",
+      "tags": [
+        "UserController"
+      ],
+      "version": "v1",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "security": [],
+      "source": {
+        "file": "backend/src/main/java/com/example/UserController.java",
+        "line": 11,
+        "column": 16
+      }
+    },
+    {
+      "id": "21076e77170929c8c2346905961f63812913ee1b",
+      "method": "GET",
+      "path": "/bff/v1/users/{id}",
+      "operationId": "getUser",
+      "tags": [
+        "app"
+      ],
+      "version": "v1",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "responses": {},
+      "security": [
+        {
+          "schemeId": "node-auth",
+          "description": "Node auth middleware detected"
+        }
+      ],
+      "source": {
+        "file": "bff/src/app.ts",
+        "line": 5
+      }
+    }
+  ],
+  "warnings": []
+}

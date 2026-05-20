@@ -1,0 +1,114 @@
+{
+  "info": {
+    "name": "code-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "d3f124b047277ac06aa3dfe40e41f2c881639347"
+  },
+  "item": [
+    {
+      "name": "app",
+      "description": "Requests grouped from app endpoints.",
+      "item": [
+        {
+          "name": "getUser",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bff/v1/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bff",
+                "v1",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "id (string)"
+                }
+              ]
+            },
+            "description": "**Auth required:** Node auth middleware detected\n\n_Source: bff/src/app.ts:5_"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "UserController",
+      "description": "Requests grouped from UserController endpoints.",
+      "item": [
+        {
+          "name": "users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            },
+            "description": "_Source: backend/src/main/java/com/example/UserController.java:11_"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "\"string\""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{baseUrl}}"
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  }
+}
