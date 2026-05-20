@@ -8,5 +8,5 @@
   "references": [
     { "path": "../core" }
   ],
-  "files": []
+  "include": ["src/**/*.ts"]
 }

@@ -18,6 +18,18 @@ export default defineConfig({
       "@code-collection/parser-spring": new URL(
         "./packages/parser-spring/src/index.ts",
         import.meta.url
+      ).pathname,
+      "@code-collection/parser-laravel": new URL(
+        "./packages/parser-laravel/src/index.ts",
+        import.meta.url
+      ).pathname,
+      "@code-collection/parser-go": new URL(
+        "./packages/parser-go/src/index.ts",
+        import.meta.url
+      ).pathname,
+      "@code-collection/parser-node": new URL(
+        "./packages/parser-node/src/index.ts",
+        import.meta.url
       ).pathname
     }
   },
