@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@code-collection/core": ["./packages/core/src/index.ts"],
+      "@code-collection/emitter": ["./packages/emitter/src/index.ts"],
+      "@code-collection/parser-go": ["./packages/parser-go/src/index.ts"],
+      "@code-collection/parser-laravel": ["./packages/parser-laravel/src/index.ts"],
+      "@code-collection/parser-node": ["./packages/parser-node/src/index.ts"],
+      "@code-collection/parser-spring": ["./packages/parser-spring/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

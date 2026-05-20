@@ -1,0 +1,36 @@
+{
+  "name": "code-collection",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "lint": "eslint . --ext .ts,.tsx,.js,.cjs --no-error-on-unmatched-pattern",
+    "typecheck": "tsc -p tsconfig.typecheck.json --pretty false --noEmit",
+    "dev": "tsc -b --watch",
+    "cli": "node scripts/run-cli.cjs",
+    "verify:tree-sitter": "tsx scripts/verify-tree-sitter-java.ts",
+    "dump:ast": "tsx scripts/dump-ast.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
+    "tsx": "^4.22.1",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "trustedDependencies": [
+    "esbuild",
+    "tree-sitter",
+    "tree-sitter-java"
+  ]
+}

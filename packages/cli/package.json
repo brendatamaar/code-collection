@@ -1,0 +1,33 @@
+{
+  "name": "@code-collection/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "code-collection": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "bun --watch src/index.ts",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --no-error-on-unmatched-pattern",
+    "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@code-collection/core": "workspace:*",
+    "@code-collection/emitter": "workspace:*",
+    "@code-collection/parser-go": "workspace:*",
+    "@code-collection/parser-laravel": "workspace:*",
+    "@code-collection/parser-node": "workspace:*",
+    "@code-collection/parser-spring": "workspace:*",
+    "citty": "^0.1.6"
+  }
+}

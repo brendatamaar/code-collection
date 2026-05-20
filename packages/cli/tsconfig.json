@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../.tsbuildinfo/cli.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../core" },
+    { "path": "../emitter" },
+    { "path": "../parser-go" },
+    { "path": "../parser-laravel" },
+    { "path": "../parser-node" },
+    { "path": "../parser-spring" }
+  ],
+  "include": ["src/**/*.ts"]
+}

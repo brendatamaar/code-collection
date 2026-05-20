@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/parser-spring" },
+    { "path": "./packages/parser-laravel" },
+    { "path": "./packages/parser-go" },
+    { "path": "./packages/parser-node" },
+    { "path": "./packages/emitter" },
+    { "path": "./packages/cli" }
+  ]
+}

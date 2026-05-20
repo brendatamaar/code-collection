@@ -1,0 +1,14 @@
+node_modules/
+.bun-cache/
+dist/
+coverage/
+.tmp/
+.turbo/
+.claude/
+.DS_Store
+*.log
+*.tsbuildinfo
+api-collection.json
+*.postman_collection.json
+*.postman_environment.json
+docs/
