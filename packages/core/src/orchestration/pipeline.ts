@@ -1,3 +1,5 @@
+import { basename } from "node:path";
+
 import { glob } from "tinyglobby";
 
 import type { ResolvedOptions } from "../config/types.js";
@@ -155,7 +157,7 @@ function toIRInput(
       ...firstMetadata
     },
     info: {
-      title: "code-collection",
+      title: basename(options.repoPath),
       ...parseResults[0]?.metadata
     },
     servers: options.servers,
