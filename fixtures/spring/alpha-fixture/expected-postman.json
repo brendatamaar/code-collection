@@ -7,6 +7,7 @@
   "item": [
     {
       "name": "UserController",
+      "description": "Requests grouped from UserController endpoints.",
       "item": [
         {
           "name": "listUsers",
@@ -32,7 +33,41 @@
             },
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:54_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users?page=0",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "0",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"active\": false,\n    \"email\": \"string\",\n    \"id\": 0,\n    \"name\": \"string\"\n  }\n]"
+            }
+          ]
         },
         {
           "name": "getUser",
@@ -73,7 +108,49 @@
             ],
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:20_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:id?includeInactive=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "false",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "id (integer)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"active\": false,\n  \"email\": \"string\",\n  \"id\": 0,\n  \"name\": \"string\"\n}"
+            }
+          ]
         },
         {
           "name": "createUser",
@@ -107,7 +184,34 @@
             },
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:29_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"active\": false,\n  \"email\": \"string\",\n  \"id\": 0,\n  \"name\": \"string\"\n}"
+            }
+          ]
         },
         {
           "name": "replaceUser",
@@ -149,7 +253,42 @@
             },
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:34_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "id (integer)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"active\": false,\n  \"email\": \"string\",\n  \"id\": 0,\n  \"name\": \"string\"\n}"
+            }
+          ]
         },
         {
           "name": "patchUser",
@@ -191,7 +330,42 @@
             },
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:42_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "id (integer)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"active\": false,\n  \"email\": \"string\",\n  \"id\": 0,\n  \"name\": \"string\"\n}"
+            }
+          ]
         },
         {
           "name": "deleteUser",
@@ -218,7 +392,37 @@
             },
             "description": "_Source: src/main/java/dev/codecollection/alpha/UserController.java:50_"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "id (integer)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [],
+              "body": ""
+            }
+          ]
         }
       ]
     }

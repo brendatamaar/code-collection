@@ -2,6 +2,7 @@ import type { Endpoint, Schema } from "@code-collection/core";
 
 import { generateExample } from "./examples.js";
 import { pathToPostmanUrl } from "./path.js";
+import { emitResponses } from "./response.js";
 
 export interface PostmanRequestItem {
   name: string;
@@ -52,7 +53,7 @@ export function emitRequest(
         : {}),
       ...(requestDescription ? { description: requestDescription } : {})
     },
-    response: []
+    response: emitResponses(endpoint, schemas)
   };
 }
 
