@@ -23,15 +23,42 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
   const routes: LaravelRoute[] = [];
   const warnings: Warning[] = [];
 
-  for (const file of routeFiles) {
-    try {
+  const fileContents = await Promise.all(
+    routeFiles.map(async (file) => {
       const absolute = join(ctx.repoPath, file);
       if (!existsSync(absolute)) {
-        continue;
+        return { file, content: null, error: null } as const;
       }
+      try {
+        const content = await readFile(absolute, "utf8");
+        return { file, content, error: null } as const;
+      } catch (error) {
+        return { file, content: null, error } as const;
+      }
+    })
+  );
+
+  for (const result of fileContents) {
+    if (result.content === null) {
+      if (result.error !== null) {
+        const error = result.error;
+        warnings.push({
+          level: "warning",
+          code: WarningCode.PARSE_FAILED,
+          message:
+            error instanceof Error
+              ? `Failed to parse ${result.file}: ${error.message}`
+              : `Failed to parse ${result.file}`,
+          source: { file: result.file.replace(/\\/g, "/"), line: 1 }
+        });
+      }
+      continue;
+    }
+
+    try {
       const parsed = parseLaravelRouteFile(
-        file.replace(/\\/g, "/"),
-        await readFile(absolute, "utf8")
+        result.file.replace(/\\/g, "/"),
+        result.content
       );
       routes.push(...parsed.routes);
       warnings.push(...parsed.warnings);
@@ -41,9 +68,9 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
         code: WarningCode.PARSE_FAILED,
         message:
           error instanceof Error
-            ? `Failed to parse ${file}: ${error.message}`
-            : `Failed to parse ${file}`,
-        source: { file: file.replace(/\\/g, "/"), line: 1 }
+            ? `Failed to parse ${result.file}: ${error.message}`
+            : `Failed to parse ${result.file}`,
+        source: { file: result.file.replace(/\\/g, "/"), line: 1 }
       });
     }
   }

@@ -10,25 +10,38 @@ import { DEFAULT_INIT_ANSWERS, promptForInitDefaults } from "../prompts.js";
 export const initCommand = defineCommand({
   meta: {
     name: "init",
-    description: "Create a code-collection config file"
+    description:
+      "Interactively create a code-collection.config.ts in the target repository. " +
+      "Prompts for stack, output format, base URL, and split-by-version preference. " +
+      "Use --yes to skip prompts and write defaults."
   },
   args: {
     path: {
       type: "positional",
-      description: "Repository root",
+      description:
+        "Path to the repository root where the config file will be written. " +
+        "Defaults to the current directory.",
       default: "."
     },
     yes: {
       type: "boolean",
-      description: "Write defaults without prompts"
+      alias: "y",
+      description:
+        "Skip all interactive prompts and write a config file with sensible defaults: " +
+        "stack=auto, format=postman, output=./api-collection.json, no split-by-version."
     },
     force: {
       type: "boolean",
-      description: "Overwrite an existing config"
+      description:
+        "Overwrite an existing code-collection.config.ts without prompting. " +
+        "Without this flag the command exits with an error if the file already exists."
     },
     gitignore: {
       type: "boolean",
-      description: "Append generated collection files to .gitignore"
+      description:
+        "Append generated collection and environment file patterns to the " +
+        "repository's .gitignore: api-collection.json, api-collections/, " +
+        "*.postman_environment.json."
     }
   },
   async run({ args }) {

@@ -12,13 +12,35 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
   const warnings: Warning[] = [];
   const goFiles = ctx.files.filter((file) => file.endsWith(".go"));
 
-  for (const file of goFiles) {
+  const fileContents = await Promise.all(
+    goFiles.map(async (file) => {
+      try {
+        const content = await readFile(join(ctx.repoPath, file), "utf8");
+        return { file, content, error: null } as const;
+      } catch (error) {
+        return { file, content: null, error } as const;
+      }
+    })
+  );
+
+  for (const result of fileContents) {
+    if (result.error !== null || result.content === null) {
+      const error = result.error;
+      warnings.push({
+        level: "warning",
+        code: WarningCode.PARSE_FAILED,
+        message:
+          error instanceof Error
+            ? `Failed to parse ${result.file}: ${error.message}`
+            : `Failed to parse ${result.file}`,
+        source: { file: result.file.replace(/\\/g, "/"), line: 1 }
+      });
+      continue;
+    }
+
     try {
       endpoints.push(
-        ...parseGoRoutes(
-          file.replace(/\\/g, "/"),
-          await readFile(join(ctx.repoPath, file), "utf8")
-        )
+        ...parseGoRoutes(result.file.replace(/\\/g, "/"), result.content)
       );
     } catch (error) {
       warnings.push({
@@ -26,9 +48,9 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
         code: WarningCode.PARSE_FAILED,
         message:
           error instanceof Error
-            ? `Failed to parse ${file}: ${error.message}`
-            : `Failed to parse ${file}`,
-        source: { file: file.replace(/\\/g, "/"), line: 1 }
+            ? `Failed to parse ${result.file}: ${error.message}`
+            : `Failed to parse ${result.file}`,
+        source: { file: result.file.replace(/\\/g, "/"), line: 1 }
       });
     }
   }

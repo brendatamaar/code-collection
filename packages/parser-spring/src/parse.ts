@@ -38,6 +38,8 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
     loadSpringProperties(ctx.repoPath, springOptions),
     sourceTreeHasSecurityFilterChain(ctx.repoPath, javaFiles)
   ]);
+  const parsedFileCache = await buildParsedFileCache(ctx.repoPath, javaFiles);
+  const allTrees = [...parsedFileCache.values()].map((d) => d.tree);
   const contextPath =
     properties["server.servlet.context-path"] ?? properties["server.contextPath"];
   const seenRoutes = new Set<string>();
@@ -46,8 +48,9 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
   for (const file of javaFiles) {
     try {
       const normalizedFile = file.replace(/\\/g, "/");
-      const content = await readFile(join(ctx.repoPath, file), "utf8");
-      const tree = parseFile(content);
+      const cached = parsedFileCache.get(file);
+      if (!cached) throw new Error(`Failed to read or parse ${file}`);
+      const { content, tree } = cached;
       const controllers = extractControllers(tree, {
         file: normalizedFile,
         content
@@ -92,6 +95,7 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
           registerReferencedSchemas(
             schemas,
             tree,
+            allTrees,
             [
               ...parameters.map((parameter) => parameter.schema),
               ...(requestBody
@@ -164,9 +168,34 @@ export async function parse(ctx: ParseContext): Promise<ParseResult> {
   };
 }
 
+async function buildParsedFileCache(
+  repoPath: string,
+  javaFiles: string[]
+): Promise<Map<string, { content: string; tree: ReturnType<typeof parseFile> }>> {
+  const results = await Promise.all(
+    javaFiles.map(async (file) => {
+      try {
+        const content = await readFile(join(repoPath, file), "utf8");
+        return { file, content, tree: parseFile(content) } as const;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const cache = new Map<string, { content: string; tree: ReturnType<typeof parseFile> }>();
+  for (const result of results) {
+    if (result !== null) {
+      cache.set(result.file, { content: result.content, tree: result.tree });
+    }
+  }
+  return cache;
+}
+
 function registerReferencedSchemas(
   registry: Record<string, Schema>,
   tree: ReturnType<typeof parseFile>,
+  allTrees: ReturnType<typeof parseFile>[],
   schemas: Schema[],
   warnings: Warning[] = []
 ): void {
@@ -174,18 +203,18 @@ function registerReferencedSchemas(
     if ("$ref" in schema) {
       const className = schema.$ref.slice("#/schemas/".length);
       if (registry[className] === undefined) {
-        inferDtoSchema(className, tree, registry, warnings);
+        inferDtoSchema(className, tree, registry, warnings, new Set(), allTrees);
       }
       continue;
     }
 
     if (schema.type === "array") {
-      registerReferencedSchemas(registry, tree, [schema.items], warnings);
+      registerReferencedSchemas(registry, tree, allTrees, [schema.items], warnings);
       continue;
     }
 
     if (schema.type === "object" && schema.properties) {
-      registerReferencedSchemas(registry, tree, Object.values(schema.properties), warnings);
+      registerReferencedSchemas(registry, tree, allTrees, Object.values(schema.properties), warnings);
     }
   }
 }

@@ -45,7 +45,8 @@ export function resolveOptions(
       code: "INVALID_OPTIONS",
       message: `Invalid options: ${parsed.error.issues
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-        .join("; ")}`
+        .join("; ")}`,
+      suggestion: "Run code-collection --help to see valid option values."
     });
   }
 
@@ -170,7 +171,8 @@ function parseBaseUrls(values: string[]): {
     if (seen.has(name)) {
       throw new CodeCollectionError({
         code: "INVALID_OPTIONS",
-        message: `Duplicate --base-url environment '${name}'`
+        message: `Duplicate --base-url environment '${name}'`,
+        suggestion: "Each environment name must be unique: --base-url dev=http://... --base-url prod=https://..."
       });
     }
     seen.add(name);

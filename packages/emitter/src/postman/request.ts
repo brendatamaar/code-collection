@@ -95,10 +95,57 @@ function emitBody(
     };
   }
 
+  if (contentType === "multipart/form-data") {
+    return {
+      mode: "formdata",
+      formdata: schemaToFormFields(schema, schemas, true)
+    };
+  }
+
+  if (contentType === "application/x-www-form-urlencoded") {
+    return {
+      mode: "urlencoded",
+      urlencoded: schemaToFormFields(schema, schemas, false)
+    };
+  }
+
   return {
     mode: "raw",
     raw: ""
   };
+}
+
+function schemaToFormFields(
+  schema: Schema,
+  schemas: Record<string, Schema>,
+  allowFileType: boolean
+): { key: string; value: string; type: string }[] {
+  const example = generateExample(schema, schemas);
+  if (typeof example !== "object" || example === null) {
+    return [];
+  }
+
+  const properties =
+    "type" in schema && schema.type === "object" && schema.properties
+      ? schema.properties
+      : {};
+
+  return Object.entries(example as Record<string, unknown>).map(([key, value]) => {
+    const fieldSchema = properties[key];
+    const isBinary =
+      allowFileType &&
+      fieldSchema !== undefined &&
+      "type" in fieldSchema &&
+      fieldSchema.type === "string" &&
+      "format" in fieldSchema &&
+      fieldSchema.format === "binary";
+
+    return {
+      key,
+      value: isBinary ? "" : String(value ?? ""),
+      type: isBinary ? "file" : "text"
+    };
+  });
 }
 
 function description(endpoint: Endpoint): string | undefined {

@@ -19,7 +19,8 @@ export function validateIR(ir: IR): IR {
   if (errors.length > 0) {
     throw new CodeCollectionError({
       code: "IR_VALIDATION_FAILED",
-      message: `IR validation failed: ${errors.join("; ")}`
+      message: `IR validation failed: ${errors.join("; ")}`,
+      suggestion: "This is likely a parser bug. Run with --verbose and report the issue at https://github.com/anthropics/claude-code/issues."
     });
   }
 

@@ -25,7 +25,8 @@ export function inferDtoSchema(
   sourceTree: JavaTree,
   registry: Record<string, Schema> = {},
   warnings: Warning[] = [],
-  seen: Set<string> = new Set()
+  seen: Set<string> = new Set(),
+  allTrees: JavaTree[] = []
 ): Schema {
   if (seen.has(className)) {
     warnings.push({
@@ -37,7 +38,21 @@ export function inferDtoSchema(
     return registry[className];
   }
 
-  const classNode = findClass(sourceTree.rootNode, className);
+  let classNode = findClass(sourceTree.rootNode, className);
+  let effectiveTree = sourceTree;
+
+  if (!classNode) {
+    for (const tree of allTrees) {
+      if (tree === sourceTree) continue;
+      const found = findClass(tree.rootNode, className);
+      if (found) {
+        classNode = found;
+        effectiveTree = tree;
+        break;
+      }
+    }
+  }
+
   if (!classNode) {
     registry[className] = { type: "object" };
     return registry[className];
@@ -46,7 +61,7 @@ export function inferDtoSchema(
   const properties: Record<string, Schema> = {};
   const required: string[] = [];
   const fieldNodes = [
-    ...superclassFields(sourceTree.rootNode, classNode, warnings),
+    ...superclassFields(effectiveTree.rootNode, classNode, warnings, allTrees),
     ...fieldsForClass(classNode)
   ];
 
@@ -68,7 +83,7 @@ export function inferDtoSchema(
     const mapped = mapJavaType(typeNode.text);
     properties[nameNode.text] = mapped.schema;
 
-    if ("$ref" in mapped.schema) {
+    if ("$ref" in mapped.schema || (mapped.schema.type === "array" && "$ref" in mapped.schema.items)) {
       if (mapped.typeName === className || seen.has(mapped.typeName)) {
         warnings.push({
           level: "info",
@@ -79,10 +94,11 @@ export function inferDtoSchema(
       } else if (registry[mapped.typeName] === undefined) {
         inferDtoSchema(
           mapped.typeName,
-          sourceTree,
+          effectiveTree,
           registry,
           warnings,
-          new Set([...seen, className])
+          new Set([...seen, className]),
+          allTrees
         );
       }
     }
@@ -105,14 +121,23 @@ export function inferDtoSchema(
 function superclassFields(
   rootNode: Parser.SyntaxNode,
   classNode: Parser.SyntaxNode,
-  warnings: Warning[]
+  warnings: Warning[],
+  allTrees: JavaTree[] = []
 ): Parser.SyntaxNode[] {
   const superclassName = /\bextends\s+([A-Za-z_]\w*)/.exec(classNode.text)?.[1];
   if (!superclassName) {
     return [];
   }
 
-  const superclass = findClass(rootNode, superclassName);
+  let superclass = findClass(rootNode, superclassName);
+
+  if (!superclass) {
+    for (const tree of allTrees) {
+      superclass = findClass(tree.rootNode, superclassName);
+      if (superclass) break;
+    }
+  }
+
   if (!superclass) {
     warnings.push({
       level: "info",

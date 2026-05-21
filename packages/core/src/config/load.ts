@@ -124,6 +124,7 @@ function parseJavaScriptConfig(
     throw new CodeCollectionError({
       code: "INVALID_OPTIONS",
       message: `Could not parse JavaScript config in ${dirname(configPath)}`,
+      suggestion: "Ensure the config file exports a plain object via export default or module.exports.",
       cause: error
     });
   }

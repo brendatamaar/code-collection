@@ -19,6 +19,7 @@ export function formatDefaultReport(
     report.warningCount > 0
       ? `${report.warningCount} warnings`
       : "0 warnings",
+    options.verbose && report.warnings.length > 0 ? warningsSummary(report) : undefined,
     report.dryRun
       ? "Dry run: no files emitted"
       : emittedSummary(report),
@@ -35,6 +36,15 @@ function emittedSummary(report: PipelineReport): string {
 
   return report.emittedFiles
     .map((file) => `Emitted ${file.path} (${file.bytes} bytes)`)
+    .join("\n");
+}
+
+function warningsSummary(report: PipelineReport): string {
+  return report.warnings
+    .map((w) => {
+      const location = w.source ? ` (${w.source.file}:${w.source.line})` : "";
+      return `  [${w.level}] ${w.code}: ${w.message}${location}`;
+    })
     .join("\n");
 }
 
